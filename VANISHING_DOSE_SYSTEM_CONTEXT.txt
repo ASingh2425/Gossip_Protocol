@@ -1,0 +1,283 @@
+================================================================================
+VANISHING DOSE — FULL SYSTEM CONTEXT & FRONTEND DESIGN SPECIFICATION
+================================================================================
+Document Version: 2.0.0
+Target Audience: Frontend Developers, UI/UX Designers, Product Architects, LLM Code Generators
+Project Root: c:\Users\Anvesha\OneDrive\Desktop\M_Hash
+Repository: https://github.com/ASingh2425/Gossip_Protocol
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PRODUCT VISION & CORE PHILOSOPHY
+--------------------------------------------------------------------------------
+PROBLEM STATEMENT:
+"The Vanishing Dose — Detecting Medication Non-Adherence Without Asking"
+A patient may be prescribed the right medication, yet treatment can fail because doses are missed, taken at the wrong time, or stopped altogether. Clinicians have very little visibility between appointments. Signals like refills, prescription changes, symptoms, wearable data, and follow-up records contain clues, but are rarely considered together.
+
+CORE PHILOSOPHY:
+"Don't just detect the vanishing dose. Explain where it vanished, remove the obstacle, and prove that it came back."
+
+FOUNDATIONAL LAYER vs INNOVATION STACK:
+- Base Layer (Original PS): Prescription -> Plan -> Reminders -> Tracking -> Adherence.
+- Layer 1 (USP 1 - Execution Forensics): Reconstruct why a dose diverged using surrounding temporal evidence without asking the user.
+- Layer 2 (USP 2 - Failure-Specific Access Recovery): Route detected access failures to verified nearby pharmacies with stock confidence ratings, price comparisons, and personalized excipient/drug safety checks.
+- Layer 3 (USP 3 - Closed-Loop Verification): Verify that intervention actually restored physical stock (+30 tablets) and dose execution back to clinicians.
+
+
+--------------------------------------------------------------------------------
+2. THE 4-STAGE INTELLIGENCE MODEL
+--------------------------------------------------------------------------------
+STAGE 1 — DETECT (Timeline Monitor):
+- Monitors dose scheduled times passively.
+- Flags execution divergence if reminder timeout occurs without confirmation.
+
+STAGE 2 — EXPLAIN (Execution Forensics Engine):
+- Analyzes 5 background signal vectors: Refill Overdue Days, Calculated Stock Depletion, Wearable Sleep/Timezone Shifts, Post-Dose Symptom Score, Schedule Delays.
+- Generates Failure Attribution:
+  * ACCESS_EXHAUSTION: Stock <= 0 at dose time, refill overdue. (High Certainty ~94%)
+  * SIDE_EFFECT_AVOIDANCE: Post-dose symptom score >= 5/10 (Nausea/Epigastric distress). (Medium-High Certainty ~82%)
+  * ROUTINE_DISRUPTION: Wearable travel timezone shift or severe sleep disruption. (Medium Certainty ~74%)
+  * FORGETTING: Stock normal (>2 units), zero routine/symptom anomalies. (High Certainty ~90%)
+- Computes dynamic Certainty Score (0-100%) and Confidence Level (HIGH_CONFIDENCE, MEDIUM_CONFIDENCE, LOW_CONFIDENCE).
+- Categorizes Pattern Taxonomy (INTERMITTENT_SLIP, STRUCTURAL_DRIFT, ACUTE_ABANDONMENT).
+
+STAGE 3 — RESOLVE (Medication Access Recovery Engine):
+- Converts pharmacy search into a cause-specific recovery action.
+- Availability Confidence Protocol:
+  * HIGH_CONFIDENCE: Direct inventory API sync < 30 mins ago.
+  * MEDIUM_CONFIDENCE: Partner confirmation < 6 hrs ago.
+  * UNCONFIRMED: Stale data / manual listing.
+- Personalized AI Alternative Brand & Excipient Safety Evaluator:
+  * Evaluates candidate in-stock substitute brands (e.g. Stamlo 5mg, Amlopres 5mg, Amlokind-AT combo) against patient active co-medications and known allergies.
+  * Outputs: 🟢 SAFE_EQUIVALENT (98% Score), 🟡 REQUIRES_PHARMACIST_CONSULT (68% Score), 🔴 CONTRAINDICATED_SUBSTITUTE (48% Score).
+- 30-Minute Real-Time Stock Reservation Lock: Patient places a 30-min hold hold request on local pharmacy inventory while traveling.
+- Pre-filled WhatsApp Generator: Auto-populates order text with drug name, brand, dosage, and delivery address.
+
+STAGE 4 — VERIFY (Closed-Loop Verification Ledger):
+- Tracks state machine: PENDING -> INTERVENTION_SENT -> STOCK_RESERVED -> MEDICATION_ACQUIRED -> DOSE_RESTORED -> VERIFIED_SUCCESS.
+- Restores physical stock counter by +30 tablets upon acquisition.
+- Updates Doctor Command Center triage status to GREEN.
+
+
+--------------------------------------------------------------------------------
+3. DOMAIN DATA MODELS & SCHEMAS
+--------------------------------------------------------------------------------
+
+PATIENT PROFILE:
+- id: string (e.g. "p-101")
+- name: string (e.g. "Anvesha Sharma")
+- age: number (e.g. 48)
+- condition: string (e.g. "Essential Hypertension")
+- activeCoMedications: string[] (e.g. ["Metformin 500mg BD", "Atorvastatin 10mg HS"])
+- knownAllergies: string[] (e.g. ["Lactose Monohydrate", "Sulfa Drugs"])
+- riskStatus: "RED" | "ORANGE" | "GREEN"
+- verificationStatus: "PENDING" | "INTERVENTION_SENT" | "STOCK_RESERVED" | "MEDICATION_ACQUIRED" | "DOSE_RESTORED" | "VERIFIED_SUCCESS"
+- ashaEscalated: boolean
+- activeReservation: StockReservation
+- supply: MedicationSupply
+- doses: DoseEvent[]
+- signals: PatientSignals
+- activeAttribution: ForensicsAttribution
+- recoveryHistory: Array<{ timestamp: string, action: string, result: string }>
+
+MEDICATION SUPPLY:
+- medicationName: string (e.g. "Amlodipine 5mg")
+- dosage: string (e.g. "1 tablet daily")
+- currentStock: number (e.g. 0)
+- dailyConsumption: number (e.g. 1)
+- lastRefillDate: string (e.g. "2026-08-04")
+- expectedDepletionDate: string (e.g. "2026-09-04")
+- deliveryLeadTimeHours: number (e.g. 6)
+- brandName: string (e.g. "Amlovas 5mg")
+- genericName: string (e.g. "Amlodipine Besylate 5mg")
+
+FORENSICS ATTRIBUTION:
+- patientId: string
+- patientName: string
+- medicationName: string
+- missedDoseTime: string
+- detectedCause: "ACCESS_EXHAUSTION" | "FORGETTING" | "SIDE_EFFECT_AVOIDANCE" | "ROUTINE_DISRUPTION" | "CLINICAL_CONCERN" | "UNKNOWN"
+- confidenceScore: number (0 - 100)
+- confidenceLevel: "HIGH_CONFIDENCE" | "MEDIUM_CONFIDENCE" | "LOW_CONFIDENCE"
+- patternType: "INTERMITTENT_SLIP" | "STRUCTURAL_DRIFT" | "ACUTE_ABANDONMENT"
+- evidence: string[]
+- suggestedAction: "PHARMACY_RECOVERY" | "CONTEXTUAL_NUDGE" | "DOCTOR_ESCALATION"
+- adherenceTrend30Days: number[] (e.g. [98, 92, 85, 70, 52])
+
+PHARMACY STORE:
+- id: string (e.g. "pharmacy-1")
+- name: string (e.g. "Apollo Pharmacy & Wellness")
+- address: string (e.g. "Sector 18, Block B, 0.7 km away")
+- distanceKm: number (e.g. 0.7)
+- priceINR: number (e.g. 180)
+- inStock: boolean
+- stockConfidence: "HIGH_CONFIDENCE" | "MEDIUM_CONFIDENCE" | "UNCONFIRMED"
+- lastVerifiedMinutesAgo: number (e.g. 12)
+- verificationSource: "DIRECT_INVENTORY_API" | "PARTNER_CONFIRMATION" | "UNVERIFIED_LISTING"
+- supportsDelivery: boolean
+- supportsPickup: boolean
+- estimatedFulfillmentTime: string (e.g. "25 mins")
+- phone: string (e.g. "+91 98765 43210")
+- whatsapp: string (e.g. "919876543210")
+- isGenericEquivalent: boolean
+- storeHours: string (e.g. "Open 24/7")
+- transitDelayMins: number (e.g. 10)
+- availableAlternatives: AlternativeMedication[]
+
+ALTERNATIVE MEDICATION:
+- id: string (e.g. "alt-101")
+- brandName: string (e.g. "Amlopres 5mg")
+- genericName: string (e.g. "Amlodipine Besylate 5mg (RxCUI: 197361)")
+- manufacturer: string (e.g. "Cipla Ltd.")
+- priceINR: number (e.g. 155)
+- activeIngredients: string[] (e.g. ["Amlodipine Besylate 5mg"])
+- excipients: string[] (e.g. ["Microcrystalline Cellulose (UNII: OP1R32D61U)", "Lactose Monohydrate (UNII: EWQ57Q8I5X)"])
+- safetyStatus: "SAFE_EQUIVALENT" | "REQUIRES_PHARMACIST_CONSULT" | "CONTRAINDICATED_SUBSTITUTE"
+- safetyScore: number (0 - 100)
+- interactionWarnings: string[]
+
+STOCK RESERVATION:
+- id: string (e.g. "res-1725530000")
+- pharmacyId: string
+- pharmacyName: string
+- patientId: string
+- patientName: string
+- medicationName: string
+- reservedAt: string (e.g. "04:30 PM")
+- expiresAt: string (e.g. "05:00 PM")
+- status: "ACTIVE" | "FULFILLED" | "EXPIRED"
+
+
+--------------------------------------------------------------------------------
+4. FACTUAL CLINICAL DATASETS INTEGRATED
+--------------------------------------------------------------------------------
+1. NIH RxNorm / RxNav (U.S. National Library of Medicine):
+   - Concept Unique Identifiers (RxCUI) for clinical drugs and semantic brand mapping.
+   - Amlodipine 5mg Oral Tablet -> RxCUI: 197361
+   - Atenolol 50mg Oral Tablet -> RxCUI: 197381
+   - Metformin 500mg Oral Tablet -> RxCUI: 860975
+   - Atorvastatin 10mg Oral Tablet -> RxCUI: 617314
+
+2. FDA DailyMed Inactive Ingredient Database (IID & UNII Codes):
+   - Unique Ingredient Identifiers for inactive binders, disintegrants, and allergens.
+   - Lactose Monohydrate Binder -> UNII: EWQ57Q8I5X (Allergen flag: TRUE)
+   - Microcrystalline Cellulose -> UNII: OP1R32D61U
+   - Sodium Starch Glycolate -> UNII: H8AV0SQX4D
+
+3. DrugBank 5.0 Clinical Drug Interaction Knowledge Graph (DDI):
+   - Evaluates drug-drug and combination active ingredient interactions.
+   - Amlodipine (DB00381) + Atenolol (DB00335) -> DB-INT-00381-00335 (Moderate hypotensive/bradycardic monitoring)
+   - Atenolol (DB00335) + Metformin (DB00331) -> High severity warning (Beta-blockers mask hypoglycemia tachycardia symptoms - FDA DailyMed Warning 2.4).
+
+4. PhysioNet MIMIC-IV Clinical Telemetry (MIT / Beth Israel):
+   - Longitudinal Electronic Medication Administration Records (eMAR) used to establish baseline non-adherence curves.
+
+
+--------------------------------------------------------------------------------
+5. TRI-PORTAL UI SPECIFICATIONS & VIEW LAYOUTS
+--------------------------------------------------------------------------------
+
+PORTAL 1: EXECUTIVE PITCH & ARCHITECTURE OVERVIEW ("/")
+- Hero Section: Title "VANISHING DOSE", Subtitle "From Missed Dose to Resolved Dose", Pitch quote box.
+- 3 USP Feature Cards: Execution Forensics (01), Failure-Specific Recovery (02), Closed-Loop Verification (03).
+- Live Interactive Flowchart: Stage 1 Detect -> Stage 2 Explain -> Stage 3 Resolve -> Stage 4 Verify.
+- Cohort Risk Counters: Count of RED (Access Failure), ORANGE (Disruption), GREEN (Restored).
+- Quick Links: Portal navigation to Patient App, Doctor Command Center, and Pharmacy Portal.
+
+PORTAL 2: PATIENT APP PORTAL ("/patient")
+- Top Header: Active Patient Name, Age, Condition, Refill Cycle, Demo Patient Selector dropdown.
+- Projected Depletion Warning Banner: Displays depletion hours remaining vs delivery lead time. Triggers "Launch Access Recovery" button if stock <= 0.
+- Prescribed Regimen & Inventory Cards: Current Stock Counter (Tablets left, colored red if 0), Daily Consumption, Lead Time.
+- Today's Execution Schedule: Timeline of doses (TAKEN, MISSED, RECOVERED).
+- Cause-Specific Resolution Box: Displays Forensics Output and button to launch verified local pharmacy access recovery.
+- Access Recovery Modal / Drawer:
+  * Diagnostic Summary Banner: Forensics cause and calculated physical stock status.
+  * Patient Medical Context Banner: Displays Active Co-Meds and Known Allergies.
+  * Ranked Pharmacy Cards: Store Name, Distance (km), Price (₹), Stock Confidence Badge (HIGH/MEDIUM/UNCONFIRMED), Store Hours, Transit Lead Time, Delivery/Pickup tags.
+  * Alternative Brand & Excipient Safety Evaluator: Displays candidate substitute brands with personalized safety badges (🟢 SAFE_EQUIVALENT, 🟡 CONSULT_PHARMACIST, 🔴 CONTRAINDICATED_SUBSTITUTE) and FDA UNII / DrugBank warning text.
+  * Action Toolbar: "Hold Stock (30m)" button, "Call" button, "Pre-filled WhatsApp" button, "Pill Photo Scan" button, "Medication Obtained -> Restore Adherence" button (triggers celebratory confetti and updates stock by +30).
+
+PORTAL 3: DOCTOR COMMAND CENTER ("/doctor")
+- Header: Clinical Command Center title, panel risk metrics (RED count, ORANGE count, GREEN count).
+- Panel Failure Cause Distribution Chart: Aggregated count of Access Failures, Side-Effect Avoidance, Routine Disruption, and Forgetting.
+- Patient Triage List (Left Column): List of patients with risk status indicators (🔴 RED, 🟠 ORANGE, 🟢 GREEN), medication name, stock count, and attributed cause. Clicking selects patient for forensics audit.
+- Forensics Audit Detail View (Right Column):
+  * Forensics Reasoning Output Header: Detected cause badge and Confidence badge.
+  * Reasoning Certainty Meter: Progress bar showing dynamic confidence percentage (0-100%).
+  * 30-Day Adherence Drift Trajectory: Bar chart tracking 30-day adherence percentage drift over time.
+  * Community Asha Worker Escalation Status: Asha worker alert status (Standby vs ALERT DISPATCHED) with button to dispatch fallback alert.
+  * Temporal Evidence Chain: Numbered list of exact evidence items extracted from background signals.
+  * Clinical Actions Toolbar: "Modify Dosage / Regimen" button (opens modal to edit dosage text) and "Export HL7 FHIR R4 JSON" button (toggles interactive FHIR bundle viewer).
+  * Closed-Loop Recovery Audit Log: Timestamped ledger of actions and verification status.
+
+PORTAL 4: PHARMACY PARTNER NETWORK ("/pharmacy")
+- Header: Pharmacy Access Recovery Network title and active connected store counter.
+- Inventory Verification Protocol Banner: Explains High Confidence requirement (<30 min API sync).
+- Active 30-Minute Patient Stock Reservation Locks Queue: Card list showing active patient holds, medication name, reserved timestamp, and expiration timestamp.
+- Pharmacy Cards Grid: Store Name, Address, Stock Confidence Badge, Price edit input box, Fulfillment tags, and "Confirm Live Stock & Sync API" button (upgrades store to HIGH_CONFIDENCE with live 0m API timestamp).
+
+
+--------------------------------------------------------------------------------
+6. DESIGN SYSTEM & COLOR PALETTE GUIDELINES
+--------------------------------------------------------------------------------
+BACKGROUNDS & CARDS:
+- Body Background: Deep Slate/Gray (`#030712` / `bg-slate-950`)
+- Cards & Panels: Dark Slate (`#0f172a` / `bg-slate-900`), Border (`#1e293b` / `border-slate-800`)
+- Modals & Drawers: Slate Overlay (`bg-slate-950/80` with `backdrop-blur-md`)
+
+ACCENT COLOR SCHEME:
+- Medical Cyan (Primary Accent): `#06b6d4` / `text-cyan-400` / `bg-cyan-500`
+- Medical Blue: `#0284c7` / `text-blue-400` / `bg-blue-600`
+- Emerald Green (Restored / Safe): `#10b981` / `text-emerald-400` / `bg-emerald-950`
+- Rose Red (Critical Risk / Access Failure / Contraindicated): `#f43f5e` / `text-rose-400` / `bg-rose-950`
+- Amber Yellow (Disruption Warning / Side Effects / Consult): `#f59e0b` / `text-amber-400` / `bg-amber-950`
+- Purple (Stock Holds / Asha Escalation): `#8b5cf6` / `text-purple-400` / `bg-purple-950`
+
+TYPOGRAPHY & ICONS:
+- Sans-Serif font (System UI / Inter / Roboto)
+- Monospace font for timestamps, RxCUI codes, prices, percentages, and IDs (`font-mono`)
+- Lucide React icon suite: `Activity`, `Cpu`, `ShieldAlert`, `ShieldCheck`, `ShieldX`, `Pill`, `Stethoscope`, `Store`, `User`, `Clock`, `MapPin`, `Truck`, `ShoppingBag`, `Phone`, `MessageSquare`, `Camera`, `Lock`, `FileJson`, `TrendingUp`, `UserCheck`, `Edit3`.
+
+
+--------------------------------------------------------------------------------
+7. REACTIVE STATE ENGINE & FUNCTIONAL FLOWS
+--------------------------------------------------------------------------------
+STATE PROVIDER (`VanishingDoseContext.tsx`):
+- `patients`: List of Patient objects.
+- `pharmacies`: List of Pharmacy objects.
+- `reservations`: List of active StockReservation objects.
+- `selectedPatientId`: Currently active patient ID.
+
+CORE CONTEXT METHODS:
+1. `triggerRecoveryAction(patientId, nextStatus, details)`:
+   - Advances patient `verificationStatus` to `nextStatus`.
+   - If `nextStatus === 'VERIFIED_SUCCESS'` or `'MEDICATION_ACQUIRED'`, increases `supply.currentStock` by +30, updates missed doses to `RECOVERED`, and updates `riskStatus` to `GREEN`.
+   - Appends entry to `patient.recoveryHistory`.
+2. `verifyPharmacyStock(pharmacyId, inStock, priceINR)`:
+   - Sets pharmacy `stockConfidence` to `HIGH_CONFIDENCE`.
+   - Updates `lastVerifiedMinutesAgo` to `0`.
+   - Sets `verificationSource` to `DIRECT_INVENTORY_API`.
+3. `reservePharmacyStock(pharmacyId, patientId)`:
+   - Creates a 30-minute `StockReservation` object.
+   - Sets patient `verificationStatus` to `STOCK_RESERVED`.
+   - Adds hold entry to pharmacy reservation queue.
+4. `triggerAshaEscalation(patientId)`:
+   - Sets `patient.ashaEscalated = true`.
+   - Logs fallback alert dispatch in `recoveryHistory`.
+5. `modifyRegimen(patientId, newDosage)`:
+   - Updates `patient.supply.dosage` to `newDosage`.
+   - Logs clinician adjustment in `recoveryHistory`.
+
+
+--------------------------------------------------------------------------------
+8. HOW TO RUN & TEST THE APPLICATION
+--------------------------------------------------------------------------------
+BUILD & RUN COMMANDS:
+1. `npm install` — Installs Next.js, React, TailwindCSS, Lucide React, Framer Motion, canvas-confetti.
+2. `npx tsx scratch/test_model.ts` — Executes headless test script verifying forensics reasoning engine, DrugBank interaction checks, RxNorm/FDA UNII mappings, and state transitions.
+3. `npm run dev` — Launches Next.js dev server at http://localhost:3000.
+4. `npm run build` — Production build verification.
+
+================================================================================
+END OF VANISHING DOSE SYSTEM CONTEXT SPECIFICATION
+================================================================================
